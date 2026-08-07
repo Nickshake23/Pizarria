@@ -15,7 +15,13 @@ const ProdutoSchema = new mongoose.Schema({
 
     categoria: {
         type: String,
-        required: true
+        required: true,
+        enum: [
+            "Pizza",
+            "Bebida",
+            "Sobremesa",
+            "Porcao"
+        ]
     },
 
     preco: {
@@ -41,6 +47,12 @@ const ProdutoSchema = new mongoose.Schema({
 
 }, {
     timestamps: true
+});
+
+ProdutoSchema.index({
+
+    nome: "text"
+
 });
 
 module.exports = mongoose.model("Produto", ProdutoSchema);

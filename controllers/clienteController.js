@@ -16,9 +16,11 @@ const listarClientes = async (req, res) => {
     } catch (error) {
 
         res.status(500).json({
+
             sucesso: false,
             mensagem: "Erro ao buscar clientes.",
             erro: error.message
+
         });
 
     }
@@ -39,8 +41,10 @@ const buscarCliente = async (req, res) => {
         if (!cliente) {
 
             return res.status(404).json({
+
                 sucesso: false,
                 mensagem: "Cliente não encontrado."
+
             });
 
         }
@@ -50,8 +54,10 @@ const buscarCliente = async (req, res) => {
     } catch (error) {
 
         res.status(500).json({
+
             sucesso: false,
             erro: error.message
+
         });
 
     }
@@ -76,6 +82,12 @@ const cadastrarCliente = async (req, res) => {
 
         } = req.body;
 
+        /*
+        =========================================
+        VALIDAR CAMPOS OBRIGATÓRIOS
+        =========================================
+        */
+
         if (!nome || !telefone) {
 
             return res.status(400).json({
@@ -86,6 +98,35 @@ const cadastrarCliente = async (req, res) => {
             });
 
         }
+
+        /*
+        =========================================
+        VERIFICAR TELEFONE
+        =========================================
+        */
+
+        const telefoneExiste = await Cliente.findOne({
+
+            telefone
+
+        });
+
+        if (telefoneExiste) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+                mensagem: "Já existe um cliente com este telefone."
+
+            });
+
+        }
+
+        /*
+        =========================================
+        CADASTRAR CLIENTE
+        =========================================
+        */
 
         const cliente = new Cliente({
 

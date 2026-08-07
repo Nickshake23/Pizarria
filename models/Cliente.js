@@ -11,7 +11,8 @@ const ClienteSchema = new mongoose.Schema({
     telefone: {
         type: String,
         required: true,
-        trim: true
+        trim: true,
+        unique: true
     },
 
     email: {
@@ -52,6 +53,14 @@ const ClienteSchema = new mongoose.Schema({
 
 }, {
     timestamps: true
+});
+
+ClienteSchema.index({
+
+    nome: "text",
+
+    telefone: "text"
+
 });
 
 module.exports = mongoose.model("Cliente", ClienteSchema);
