@@ -6,7 +6,7 @@ LISTAR CLIENTES
 =========================================
 */
 
-const listarClientes = async (req, res) => {
+const listarClientes = async (req, res, next) => {
 
     try {
 
@@ -102,17 +102,9 @@ const listarClientes = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
+    next(error);
 
-            sucesso: false,
-
-            mensagem: "Erro ao buscar clientes.",
-
-            erro: error.message
-
-        });
-
-    }
+}
 
 };
 
@@ -123,7 +115,7 @@ BUSCAR POR ID
 =========================================
 */
 
-const buscarCliente = async (req, res) => {
+const buscarCliente = async (req, res, next) => {
 
     try {
 
@@ -134,6 +126,7 @@ const buscarCliente = async (req, res) => {
             return res.status(404).json({
 
                 sucesso: false,
+
                 mensagem: "Cliente não encontrado."
 
             });
@@ -144,13 +137,7 @@ const buscarCliente = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
-
-            sucesso: false,
-            mensagem: "Erro ao buscar cliente.",
-            erro: error.message
-
-        });
+        next(error);
 
     }
 
@@ -163,7 +150,7 @@ CADASTRAR
 =========================================
 */
 
-const cadastrarCliente = async (req, res) => {
+const cadastrarCliente = async (req, res, next) => {
 
     try {
 
@@ -245,17 +232,9 @@ const cadastrarCliente = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
+    next(error);
 
-            sucesso: false,
-
-            mensagem: "Erro ao cadastrar cliente.",
-
-            erro: error.message
-
-        });
-
-    }
+}
 
 };
 
@@ -266,7 +245,7 @@ ATUALIZAR
 =========================================
 */
 
-const atualizarCliente = async (req, res) => {
+const atualizarCliente = async (req, res, next) => {
 
     try {
 
@@ -311,17 +290,9 @@ const atualizarCliente = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
+    next(error);
 
-            sucesso: false,
-
-            mensagem: "Erro ao atualizar cliente.",
-
-            erro: error.message
-
-        });
-
-    }
+}
 
 };
 
@@ -332,7 +303,7 @@ EXCLUIR
 =========================================
 */
 
-const excluirCliente = async (req, res) => {
+const excluirCliente = async (req, res, next) => {
 
     try {
 
@@ -363,17 +334,9 @@ const excluirCliente = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
+    next(error);
 
-            sucesso: false,
-
-            mensagem: "Erro ao remover cliente.",
-
-            erro: error.message
-
-        });
-
-    }
+}
 
 };
 

@@ -6,7 +6,7 @@ LISTAR PRODUTOS
 =========================================
 */
 
-const listarProdutos = async (req, res) => {
+const listarProdutos = async (req, res, next) => {
 
     try {
 
@@ -111,17 +111,9 @@ const listarProdutos = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
+    next(error);
 
-            sucesso: false,
-
-            mensagem: "Erro ao buscar produtos.",
-
-            erro: error.message
-
-        });
-
-    }
+}
 
 };
 
@@ -132,7 +124,7 @@ BUSCAR POR ID
 =========================================
 */
 
-const buscarProduto = async (req, res) => {
+const buscarProduto = async (req, res, next) => {
 
     try {
 
@@ -153,15 +145,9 @@ const buscarProduto = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
+    next(error);
 
-            sucesso: false,
-            mensagem: "Erro ao buscar produto.",
-            erro: error.message
-
-        });
-
-    }
+}
 
 };
 
@@ -172,7 +158,7 @@ CADASTRAR PRODUTO
 =========================================
 */
 
-const cadastrarProduto = async (req, res) => {
+const cadastrarProduto = async (req, res, next) => {
 
     try {
 
@@ -392,22 +378,7 @@ const cadastrarProduto = async (req, res) => {
 
         }
 
-
-        /*
-        =========================================
-        ERRO INTERNO
-        =========================================
-        */
-
-        return res.status(500).json({
-
-            sucesso: false,
-
-            mensagem: "Erro ao cadastrar produto.",
-
-            erro: error.message
-
-        });
+       next(error);
 
     }
 
@@ -420,7 +391,7 @@ ATUALIZAR
 =========================================
 */
 
-const atualizarProduto = async (req, res) => {
+const atualizarProduto = async (req, res,next) => {
 
     try {
 
@@ -473,20 +444,12 @@ const atualizarProduto = async (req, res) => {
                 mensagem: "Dados inválidos para atualização do produto.",
 
                 erro: error.message
-
+                
             });
 
         }
 
-        res.status(500).json({
-
-            sucesso: false,
-
-            mensagem: "Erro ao atualizar produto.",
-
-            erro: error.message
-
-        });
+        next(error);
 
     }
 
@@ -499,7 +462,7 @@ EXCLUIR
 =========================================
 */
 
-const excluirProduto = async (req, res) => {
+const excluirProduto = async (req, res, next) => {
 
     try {
 
@@ -528,17 +491,9 @@ const excluirProduto = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
+    next(error);
 
-            sucesso: false,
-
-            mensagem: "Erro ao remover produto.",
-
-            erro: error.message
-
-        });
-
-    }
+}
 
 };
 
