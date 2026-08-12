@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const autenticarToken = require("../middlewares/auth");
+const permitirCargos = require("../middlewares/permissao");
 
 const {
 
@@ -37,10 +38,22 @@ router.get("/", listarUsuarios);
 
 router.get("/:id", buscarUsuario);
 
-router.post("/", cadastrarUsuario);
+router.post(
+    "/",
+    permitirCargos("Administrador"),
+    cadastrarUsuario
+);
 
-router.put("/:id", atualizarUsuario);
+router.put(
+    "/:id",
+    permitirCargos("Administrador"),
+    atualizarUsuario
+);
 
-router.delete("/:id", excluirUsuario);
+router.delete(
+    "/:id",
+    permitirCargos("Administrador"),
+    excluirUsuario
+);
 
 module.exports = router;

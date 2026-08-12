@@ -13,6 +13,11 @@ const ProdutoSchema = new mongoose.Schema({
         default: ""
     },
 
+    imagem: {
+    type: String,
+    default: ""
+    },
+
     categoria: {
         type: String,
         required: true,
@@ -51,7 +56,8 @@ const ProdutoSchema = new mongoose.Schema({
 
 ProdutoSchema.index({
 
-    nome: "text"
+    nome: "text",
+
 
 });
 

@@ -93,9 +93,7 @@ const cadastrarPedido = async (req, res) => {
     try {
 
         const {
-
             cliente,
-            usuario,
             itens,
             tipoPedido,
             formaPagamento,
@@ -103,6 +101,8 @@ const cadastrarPedido = async (req, res) => {
             enderecoEntrega
 
         } = req.body;
+
+        const usuario = req.usuario.id;
 
         const clienteExiste = await Cliente.findById(cliente);
 
