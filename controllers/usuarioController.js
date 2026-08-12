@@ -64,48 +64,232 @@ const buscarUsuario = async (req, res) => {
 CADASTRAR USUÁRIO
 =========================================
 */
+
 const cadastrarUsuario = async (req, res) => {
 
     try {
 
-        const { nome, email, senha, cargo } = req.body;
+        const {
+            nome,
+            email,
+            senha,
+            cargo
+        } = req.body;
 
-        const existe = await Usuario.findOne({ email });
 
-        if (existe) {
+        /*
+        =========================================
+        VALIDAR NOME
+        =========================================
+        */
+
+        if (!nome || !nome.trim()) {
 
             return res.status(400).json({
+
                 sucesso: false,
-                mensagem: "E-mail já cadastrado."
+
+                mensagem: "O nome do usuário é obrigatório."
+
             });
 
         }
 
-        const senhaCriptografada = await bcrypt.hash(senha, 10);
+
+        /*
+        =========================================
+        VALIDAR E-MAIL
+        =========================================
+        */
+
+        if (!email || !email.trim()) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "O e-mail é obrigatório."
+
+            });
+
+        }
+
+
+        const emailNormalizado = email
+            .trim()
+            .toLowerCase();
+
+
+        const formatoEmail =
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+
+        if (!formatoEmail.test(emailNormalizado)) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "Informe um e-mail válido."
+
+            });
+
+        }
+
+
+        /*
+        =========================================
+        VALIDAR SENHA
+        =========================================
+        */
+
+        if (!senha) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "A senha é obrigatória."
+
+            });
+
+        }
+
+
+        if (senha.length < 6) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "A senha deve possuir pelo menos 6 caracteres."
+
+            });
+
+        }
+
+
+        /*
+        =========================================
+        VERIFICAR E-MAIL EXISTENTE
+        =========================================
+        */
+
+        const existe = await Usuario.findOne({
+
+            email: emailNormalizado
+
+        });
+
+
+        if (existe) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "E-mail já cadastrado."
+
+            });
+
+        }
+
+
+        /*
+        =========================================
+        CRIPTOGRAFAR SENHA
+        =========================================
+        */
+
+        const senhaCriptografada =
+            await bcrypt.hash(senha, 10);
+
+
+        /*
+        =========================================
+        CRIAR USUÁRIO
+        =========================================
+        */
 
         const usuario = new Usuario({
 
-            nome,
-            email,
+            nome: nome.trim(),
+
+            email: emailNormalizado,
+
             senha: senhaCriptografada,
+
             cargo
 
         });
 
+
         await usuario.save();
 
-        res.status(201).json({
+
+        /*
+        =========================================
+        RESPOSTA
+        =========================================
+        */
+
+        return res.status(201).json({
 
             sucesso: true,
-            mensagem: "Usuário cadastrado com sucesso."
+
+            mensagem: "Usuário cadastrado com sucesso.",
+
+            usuario: {
+
+                id: usuario._id,
+
+                nome: usuario.nome,
+
+                email: usuario.email,
+
+                cargo: usuario.cargo,
+
+                ativo: usuario.ativo
+
+            }
 
         });
 
     } catch (error) {
 
-        res.status(500).json({
+        /*
+        =========================================
+        ERRO DE VALIDAÇÃO
+        =========================================
+        */
+
+        if (error.name === "ValidationError") {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "Dados do usuário inválidos.",
+
+                erro: error.message
+
+            });
+
+        }
+
+
+        /*
+        =========================================
+        ERRO INTERNO
+        =========================================
+        */
+
+        return res.status(500).json({
 
             sucesso: false,
+
+            mensagem: "Erro ao cadastrar usuário.",
+
             erro: error.message
 
         });

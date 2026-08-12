@@ -2,23 +2,112 @@ const Cliente = require("../models/Cliente");
 
 /*
 =========================================
-LISTAR
+LISTAR CLIENTES
 =========================================
 */
+
 const listarClientes = async (req, res) => {
 
     try {
 
-        const clientes = await Cliente.find().sort({ nome: 1 });
+        const {
+            nome,
+            telefone,
+            email
+        } = req.query;
 
-        res.status(200).json(clientes);
+
+        /*
+        =========================================
+        MONTAR FILTROS
+        =========================================
+        */
+
+        const filtros = {};
+
+
+        /*
+        =========================================
+        BUSCAR POR NOME
+        =========================================
+        */
+
+        if (nome) {
+
+            filtros.nome = {
+                $regex: nome,
+                $options: "i"
+            };
+
+        }
+
+
+        /*
+        =========================================
+        BUSCAR POR TELEFONE
+        =========================================
+        */
+
+        if (telefone) {
+
+            filtros.telefone = {
+                $regex: telefone,
+                $options: "i"
+            };
+
+        }
+
+
+        /*
+        =========================================
+        BUSCAR POR E-MAIL
+        =========================================
+        */
+
+        if (email) {
+
+            filtros.email = {
+                $regex: email,
+                $options: "i"
+            };
+
+        }
+
+
+        /*
+        =========================================
+        BUSCAR CLIENTES
+        =========================================
+        */
+
+        const clientes = await Cliente.find(filtros)
+            .sort({ nome: 1 });
+
+
+        /*
+        =========================================
+        RESPOSTA
+        =========================================
+        */
+
+        res.status(200).json({
+
+            sucesso: true,
+
+            quantidade: clientes.length,
+
+            clientes
+
+        });
 
     } catch (error) {
 
         res.status(500).json({
 
             sucesso: false,
+
             mensagem: "Erro ao buscar clientes.",
+
             erro: error.message
 
         });
@@ -27,11 +116,13 @@ const listarClientes = async (req, res) => {
 
 };
 
+
 /*
 =========================================
 BUSCAR POR ID
 =========================================
 */
+
 const buscarCliente = async (req, res) => {
 
     try {
@@ -56,6 +147,7 @@ const buscarCliente = async (req, res) => {
         res.status(500).json({
 
             sucesso: false,
+            mensagem: "Erro ao buscar cliente.",
             erro: error.message
 
         });
@@ -64,23 +156,24 @@ const buscarCliente = async (req, res) => {
 
 };
 
+
 /*
 =========================================
 CADASTRAR
 =========================================
 */
+
 const cadastrarCliente = async (req, res) => {
 
     try {
 
         const {
-
             nome,
             telefone,
             email,
             endereco
-
         } = req.body;
+
 
         /*
         =========================================
@@ -99,6 +192,7 @@ const cadastrarCliente = async (req, res) => {
 
         }
 
+
         /*
         =========================================
         VERIFICAR TELEFONE
@@ -106,9 +200,7 @@ const cadastrarCliente = async (req, res) => {
         */
 
         const telefoneExiste = await Cliente.findOne({
-
             telefone
-
         });
 
         if (telefoneExiste) {
@@ -121,6 +213,7 @@ const cadastrarCliente = async (req, res) => {
             });
 
         }
+
 
         /*
         =========================================
@@ -139,10 +232,13 @@ const cadastrarCliente = async (req, res) => {
 
         await cliente.save();
 
+
         res.status(201).json({
 
             sucesso: true,
+
             mensagem: "Cliente cadastrado com sucesso.",
+
             cliente
 
         });
@@ -152,6 +248,9 @@ const cadastrarCliente = async (req, res) => {
         res.status(500).json({
 
             sucesso: false,
+
+            mensagem: "Erro ao cadastrar cliente.",
+
             erro: error.message
 
         });
@@ -160,11 +259,13 @@ const cadastrarCliente = async (req, res) => {
 
 };
 
+
 /*
 =========================================
 ATUALIZAR
 =========================================
 */
+
 const atualizarCliente = async (req, res) => {
 
     try {
@@ -178,11 +279,13 @@ const atualizarCliente = async (req, res) => {
             {
 
                 new: true,
+
                 runValidators: true
 
             }
 
         );
+
 
         if (!cliente) {
 
@@ -195,10 +298,13 @@ const atualizarCliente = async (req, res) => {
 
         }
 
-        res.json({
+
+        res.status(200).json({
 
             sucesso: true,
-            mensagem: "Cliente atualizado.",
+
+            mensagem: "Cliente atualizado com sucesso.",
+
             cliente
 
         });
@@ -208,6 +314,9 @@ const atualizarCliente = async (req, res) => {
         res.status(500).json({
 
             sucesso: false,
+
+            mensagem: "Erro ao atualizar cliente.",
+
             erro: error.message
 
         });
@@ -216,16 +325,21 @@ const atualizarCliente = async (req, res) => {
 
 };
 
+
 /*
 =========================================
 EXCLUIR
 =========================================
 */
+
 const excluirCliente = async (req, res) => {
 
     try {
 
-        const cliente = await Cliente.findByIdAndDelete(req.params.id);
+        const cliente = await Cliente.findByIdAndDelete(
+            req.params.id
+        );
+
 
         if (!cliente) {
 
@@ -238,10 +352,12 @@ const excluirCliente = async (req, res) => {
 
         }
 
-        res.json({
+
+        res.status(200).json({
 
             sucesso: true,
-            mensagem: "Cliente removido."
+
+            mensagem: "Cliente removido com sucesso."
 
         });
 
@@ -250,6 +366,9 @@ const excluirCliente = async (req, res) => {
         res.status(500).json({
 
             sucesso: false,
+
+            mensagem: "Erro ao remover cliente.",
+
             erro: error.message
 
         });
@@ -258,12 +377,17 @@ const excluirCliente = async (req, res) => {
 
 };
 
+
 module.exports = {
 
     listarClientes,
+
     buscarCliente,
+
     cadastrarCliente,
+
     atualizarCliente,
+
     excluirCliente
 
 };

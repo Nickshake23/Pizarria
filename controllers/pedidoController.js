@@ -3,9 +3,10 @@ const Cliente = require("../models/Cliente");
 const Produto = require("../models/Produto");
 const Usuario = require("../models/Usuario");
 
+
 /*
 =========================================
-LISTAR PEDIDOS
+LISTAR PEDIDOS COM FILTROS
 =========================================
 */
 
@@ -13,7 +14,96 @@ const listarPedidos = async (req, res) => {
 
     try {
 
-        const pedidos = await Pedido.find()
+        const {
+            status,
+            tipoPedido,
+            formaPagamento,
+            cliente,
+            numeroPedido
+        } = req.query;
+
+
+        /*
+        =========================================
+        MONTAR FILTROS
+        =========================================
+        */
+
+        const filtros = {};
+
+
+        /*
+        =========================================
+        FILTRAR POR STATUS
+        =========================================
+        */
+
+        if (status) {
+
+            filtros.status = status;
+
+        }
+
+
+        /*
+        =========================================
+        FILTRAR POR TIPO DE PEDIDO
+        =========================================
+        */
+
+        if (tipoPedido) {
+
+            filtros.tipoPedido = tipoPedido;
+
+        }
+
+
+        /*
+        =========================================
+        FILTRAR POR FORMA DE PAGAMENTO
+        =========================================
+        */
+
+        if (formaPagamento) {
+
+            filtros.formaPagamento = formaPagamento;
+
+        }
+
+
+        /*
+        =========================================
+        FILTRAR POR CLIENTE
+        =========================================
+        */
+
+        if (cliente) {
+
+            filtros.cliente = cliente;
+
+        }
+
+
+        /*
+        =========================================
+        BUSCAR POR NÚMERO DO PEDIDO
+        =========================================
+        */
+
+        if (numeroPedido) {
+
+            filtros.numeroPedido = numeroPedido;
+
+        }
+
+
+        /*
+        =========================================
+        BUSCAR PEDIDOS
+        =========================================
+        */
+
+        const pedidos = await Pedido.find(filtros)
 
             .populate("cliente")
 
@@ -23,13 +113,32 @@ const listarPedidos = async (req, res) => {
 
             .sort({ createdAt: -1 });
 
-        res.json(pedidos);
+
+        /*
+        =========================================
+        RESPOSTA
+        =========================================
+        */
+
+        res.status(200).json({
+
+            sucesso: true,
+
+            quantidade: pedidos.length,
+
+            pedidos
+
+        });
+
 
     } catch (error) {
 
         res.status(500).json({
 
             sucesso: false,
+
+            mensagem: "Erro ao buscar pedidos.",
+
             erro: error.message
 
         });
@@ -37,6 +146,7 @@ const listarPedidos = async (req, res) => {
     }
 
 };
+
 
 /*
 =========================================
@@ -67,13 +177,14 @@ const buscarPedido = async (req, res) => {
 
         }
 
-        res.json(pedido);
+        res.status(200).json(pedido);
 
     } catch (error) {
 
         res.status(500).json({
 
             sucesso: false,
+            mensagem: "Erro ao buscar pedido.",
             erro: error.message
 
         });
@@ -81,6 +192,7 @@ const buscarPedido = async (req, res) => {
     }
 
 };
+
 
 /*
 =========================================
@@ -93,6 +205,7 @@ const cadastrarPedido = async (req, res) => {
     try {
 
         const {
+
             cliente,
             itens,
             tipoPedido,
@@ -102,7 +215,32 @@ const cadastrarPedido = async (req, res) => {
 
         } = req.body;
 
+
+        /*
+        =========================================
+        USUÁRIO VEM DO TOKEN
+        =========================================
+        */
+
         const usuario = req.usuario.id;
+
+
+        /*
+        =========================================
+        VALIDAR CLIENTE
+        =========================================
+        */
+
+        if (!cliente) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+                mensagem: "O cliente é obrigatório."
+
+            });
+
+        }
 
         const clienteExiste = await Cliente.findById(cliente);
 
@@ -117,6 +255,13 @@ const cadastrarPedido = async (req, res) => {
 
         }
 
+
+        /*
+        =========================================
+        VALIDAR USUÁRIO
+        =========================================
+        */
+
         const usuarioExiste = await Usuario.findById(usuario);
 
         if (!usuarioExiste) {
@@ -130,22 +275,291 @@ const cadastrarPedido = async (req, res) => {
 
         }
 
-        if (!itens || itens.length === 0) {
+
+        /*
+=========================================
+VALIDAR ITENS DO PEDIDO
+=========================================
+*/
+
+        if (!Array.isArray(itens) || itens.length === 0) {
 
             return res.status(400).json({
 
                 sucesso: false,
+
                 mensagem: "O pedido deve possuir pelo menos um produto."
 
             });
 
         }
 
+
+        /*
+        =========================================
+        VALIDAR CADA ITEM
+        =========================================
+        */
+
+        for (const item of itens) {
+
+            if (!item.produto) {
+
+                return res.status(400).json({
+
+                    sucesso: false,
+
+                    mensagem: "Todos os itens devem possuir um produto."
+
+                });
+
+            }
+
+
+            if (item.quantidade === undefined || item.quantidade === null) {
+
+                return res.status(400).json({
+
+                    sucesso: false,
+
+                    mensagem: "Todos os itens devem possuir uma quantidade."
+
+                });
+
+            }
+
+
+            if (
+                typeof item.quantidade !== "number" ||
+                !Number.isFinite(item.quantidade)
+            ) {
+
+                return res.status(400).json({
+
+                    sucesso: false,
+
+                    mensagem: "A quantidade deve ser um número válido."
+
+                });
+
+            }
+
+
+            if (item.quantidade <= 0) {
+
+                return res.status(400).json({
+
+                    sucesso: false,
+
+                    mensagem: "A quantidade deve ser maior que zero."
+
+                });
+
+            }
+
+
+            if (!Number.isInteger(item.quantidade)) {
+
+                return res.status(400).json({
+
+                    sucesso: false,
+
+                    mensagem: "A quantidade deve ser um número inteiro."
+
+                });
+
+            }
+
+        }
+
+
+        /*
+        =========================================
+        VALIDAR TIPO DO PEDIDO
+        =========================================
+        */
+
+        const tiposPermitidos = [
+
+            "Balcao",
+            "Retirada",
+            "Delivery"
+
+        ];
+
+        if (!tipoPedido) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+                mensagem: "O tipo do pedido é obrigatório."
+
+            });
+
+        }
+
+        if (!tiposPermitidos.includes(tipoPedido)) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+                mensagem: "Tipo de pedido inválido."
+
+            });
+
+        }
+
+
+        /*
+        =========================================
+        VALIDAR FORMA DE PAGAMENTO
+        =========================================
+        */
+
+        const formasPagamentoPermitidas = [
+
+            "PIX",
+            "Dinheiro",
+            "Cartao de Credito",
+            "Cartao de Debito"
+
+        ];
+
+        if (!formaPagamento) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+                mensagem: "A forma de pagamento é obrigatória."
+
+            });
+
+        }
+
+        if (!formasPagamentoPermitidas.includes(formaPagamento)) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+                mensagem: "Forma de pagamento inválida."
+
+            });
+
+        }
+
+
+        /*
+        =========================================
+        VALIDAR ENDEREÇO DO DELIVERY
+        =========================================
+        */
+
+        if (tipoPedido === "Delivery") {
+
+            if (!enderecoEntrega) {
+
+                return res.status(400).json({
+
+                    sucesso: false,
+                    mensagem: "O endereço de entrega é obrigatório para pedidos Delivery."
+
+                });
+
+            }
+
+            if (
+                !enderecoEntrega.rua ||
+                !enderecoEntrega.numero ||
+                !enderecoEntrega.bairro ||
+                !enderecoEntrega.cidade ||
+                !enderecoEntrega.cep
+            ) {
+
+                return res.status(400).json({
+
+                    sucesso: false,
+                    mensagem: "Para Delivery, rua, número, bairro, cidade e CEP são obrigatórios."
+
+                });
+
+            }
+
+        }
+
+
+        /*
+        =========================================
+        PROCESSAR PRODUTOS
+        =========================================
+        */
+
         const itensPedido = [];
 
         let valorTotal = 0;
 
+
         for (const item of itens) {
+
+
+            /*
+            =========================================
+            VALIDAR PRODUTO
+            =========================================
+            */
+
+            if (!item.produto) {
+
+                return res.status(400).json({
+
+                    sucesso: false,
+                    mensagem: "Todos os itens devem possuir um produto."
+
+                });
+
+            }
+
+
+            /*
+            =========================================
+            VALIDAR QUANTIDADE
+            =========================================
+            */
+
+            if (
+                item.quantidade === undefined ||
+                item.quantidade === null
+            ) {
+
+                return res.status(400).json({
+
+                    sucesso: false,
+                    mensagem: "A quantidade do produto é obrigatória."
+
+                });
+
+            }
+
+            if (
+                typeof item.quantidade !== "number" ||
+                !Number.isInteger(item.quantidade) ||
+                item.quantidade <= 0
+            ) {
+
+                return res.status(400).json({
+
+                    sucesso: false,
+                    mensagem: "A quantidade deve ser um número inteiro maior que zero."
+
+                });
+
+            }
+
+
+            /*
+            =========================================
+            BUSCAR PRODUTO
+            =========================================
+            */
 
             const produto = await Produto.findById(item.produto);
 
@@ -160,6 +574,13 @@ const cadastrarPedido = async (req, res) => {
 
             }
 
+
+            /*
+            =========================================
+            VERIFICAR DISPONIBILIDADE
+            =========================================
+            */
+
             if (!produto.disponivel) {
 
                 return res.status(400).json({
@@ -171,9 +592,17 @@ const cadastrarPedido = async (req, res) => {
 
             }
 
+
+            /*
+            =========================================
+            CALCULAR SUBTOTAL
+            =========================================
+            */
+
             const subtotal = produto.preco * item.quantidade;
 
             valorTotal += subtotal;
+
 
             itensPedido.push({
 
@@ -189,15 +618,24 @@ const cadastrarPedido = async (req, res) => {
 
         }
 
-        const anoAtual = new Date().getFullYear().toString();
 
-        const ultimoPedido = await Pedido.findOne().sort({
+        /*
+        =========================================
+        GERAR NÚMERO DO PEDIDO
+        =========================================
+        */
 
-            numeroPedido: -1
+        const anoAtual = new Date()
+            .getFullYear()
+            .toString();
 
-        });
+
+        const ultimoPedido = await Pedido.findOne()
+            .sort({ numeroPedido: -1 });
+
 
         let numeroPedido;
+
 
         if (!ultimoPedido) {
 
@@ -211,9 +649,18 @@ const cadastrarPedido = async (req, res) => {
 
             );
 
-            numeroPedido = `${anoAtual}${String(ultimoNumero + 1).padStart(5, "0")}`;
+            numeroPedido = `${anoAtual}${String(
+                ultimoNumero + 1
+            ).padStart(5, "0")}`;
 
         }
+
+
+        /*
+        =========================================
+        CRIAR PEDIDO
+        =========================================
+        */
 
         const pedido = new Pedido({
 
@@ -231,31 +678,59 @@ const cadastrarPedido = async (req, res) => {
 
             formaPagamento,
 
-            observacao,
+            observacao: observacao || "",
 
-            enderecoEntrega,
+            enderecoEntrega:
+                tipoPedido === "Delivery"
+                    ? enderecoEntrega
+                    : undefined,
 
             status: "Recebido"
 
         });
 
+
+        /*
+        =========================================
+        SALVAR
+        =========================================
+        */
+
         await pedido.save();
 
-        res.status(201).json({
+
+        /*
+        =========================================
+        RESPOSTA
+        =========================================
+        */
+
+        const pedidoCompleto = await Pedido.findById(pedido._id)
+
+            .populate("cliente")
+
+            .populate("usuario")
+
+            .populate("itens.produto");
+
+
+        return res.status(201).json({
 
             sucesso: true,
 
             mensagem: "Pedido cadastrado com sucesso.",
 
-            pedido
+            pedido: pedidoCompleto
 
         });
 
+
     } catch (error) {
 
-        res.status(500).json({
+        return res.status(500).json({
 
             sucesso: false,
+            mensagem: "Erro ao cadastrar pedido.",
             erro: error.message
 
         });
@@ -264,9 +739,10 @@ const cadastrarPedido = async (req, res) => {
 
 };
 
+
 /*
 =========================================
-ATUALIZAR STATUS
+ATUALIZAR STATUS DO PEDIDO
 =========================================
 */
 
@@ -276,37 +752,141 @@ const atualizarStatusPedido = async (req, res) => {
 
         const { status } = req.body;
 
-        const pedido = await Pedido.findByIdAndUpdate(
 
-            req.params.id,
+        /*
+        =========================================
+        VALIDAR STATUS
+        =========================================
+        */
 
-            { status },
+        const statusPermitidos = [
 
-            {
+            "Recebido",
+            "Em preparo",
+            "Saiu para entrega",
+            "Entregue",
+            "Cancelado"
 
-                new: true,
-                runValidators: true
+        ];
 
-            }
 
-        );
+        if (!status) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "O status é obrigatório."
+
+            });
+
+        }
+
+
+        if (!statusPermitidos.includes(status)) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "Status inválido.",
+
+                statusPermitidos
+
+            });
+
+        }
+
+
+        /*
+        =========================================
+        BUSCAR PEDIDO
+        =========================================
+        */
+
+        const pedido = await Pedido.findById(req.params.id);
+
 
         if (!pedido) {
 
             return res.status(404).json({
 
                 sucesso: false,
+
                 mensagem: "Pedido não encontrado."
 
             });
 
         }
 
-        res.json({
+
+        /*
+        =========================================
+        VERIFICAR PEDIDO FINALIZADO
+        =========================================
+        */
+
+        if (pedido.status === "Cancelado") {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "Não é possível alterar um pedido cancelado."
+
+            });
+
+        }
+
+
+        if (pedido.status === "Entregue") {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "Não é possível alterar um pedido já entregue."
+
+            });
+
+        }
+
+
+        /*
+        =========================================
+        ATUALIZAR STATUS
+        =========================================
+        */
+
+        pedido.status = status;
+
+        await pedido.save();
+
+
+        /*
+        =========================================
+        BUSCAR PEDIDO ATUALIZADO
+        =========================================
+        */
+
+        await pedido.populate("cliente");
+
+        await pedido.populate("usuario");
+
+        await pedido.populate("itens.produto");
+
+
+        /*
+        =========================================
+        RESPOSTA
+        =========================================
+        */
+
+        return res.status(200).json({
 
             sucesso: true,
 
-            mensagem: "Status atualizado com sucesso.",
+            mensagem: "Status do pedido atualizado com sucesso.",
 
             pedido
 
@@ -314,9 +894,12 @@ const atualizarStatusPedido = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
+        return res.status(500).json({
 
             sucesso: false,
+
+            mensagem: "Erro ao atualizar status do pedido.",
+
             erro: error.message
 
         });
@@ -324,6 +907,7 @@ const atualizarStatusPedido = async (req, res) => {
     }
 
 };
+
 
 /*
 =========================================
@@ -335,7 +919,10 @@ const excluirPedido = async (req, res) => {
 
     try {
 
-        const pedido = await Pedido.findByIdAndDelete(req.params.id);
+        const pedido = await Pedido.findByIdAndDelete(
+            req.params.id
+        );
+
 
         if (!pedido) {
 
@@ -348,18 +935,21 @@ const excluirPedido = async (req, res) => {
 
         }
 
-        res.json({
+
+        res.status(200).json({
 
             sucesso: true,
-            mensagem: "Pedido excluído."
+            mensagem: "Pedido excluído com sucesso."
 
         });
+
 
     } catch (error) {
 
         res.status(500).json({
 
             sucesso: false,
+            mensagem: "Erro ao excluir pedido.",
             erro: error.message
 
         });
@@ -367,6 +957,7 @@ const excluirPedido = async (req, res) => {
     }
 
 };
+
 
 module.exports = {
 
