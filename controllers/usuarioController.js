@@ -7,7 +7,7 @@ const jwt = require("jsonwebtoken");
 LISTAR USUÁRIOS
 =========================================
 */
-const listarUsuarios = async (req, res) => {
+const listarUsuarios = async (req, res, next) => {
 
     try {
 
@@ -17,12 +17,9 @@ const listarUsuarios = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
-            sucesso: false,
-            erro: error.message
-        });
+    next(error);
 
-    }
+}
 
 };
 
@@ -31,7 +28,7 @@ const listarUsuarios = async (req, res) => {
 BUSCAR USUÁRIO
 =========================================
 */
-const buscarUsuario = async (req, res) => {
+const buscarUsuario = async (req, res, next) => {
 
     try {
 
@@ -50,12 +47,9 @@ const buscarUsuario = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
-            sucesso: false,
-            erro: error.message
-        });
+    next(error);
 
-    }
+}
 
 };
 
@@ -382,7 +376,7 @@ const login = async (req, res) => {
 ATUALIZAR
 =========================================
 */
-const atualizarUsuario = async (req, res) => {
+const atualizarUsuario = async (req, res, next) => {
 
     try {
 
@@ -428,14 +422,9 @@ const atualizarUsuario = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
+    next(error);
 
-            sucesso: false,
-            erro: error.message
-
-        });
-
-    }
+}
 
 };
 
@@ -444,7 +433,7 @@ const atualizarUsuario = async (req, res) => {
 EXCLUIR
 =========================================
 */
-const excluirUsuario = async (req, res) => {
+const excluirUsuario = async (req, res, next) => {
 
     try {
 
@@ -470,14 +459,9 @@ const excluirUsuario = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
+    next(error);
 
-            sucesso: false,
-            erro: error.message
-
-        });
-
-    }
+}
 
 };
 

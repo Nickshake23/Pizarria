@@ -10,7 +10,7 @@ LISTAR PEDIDOS COM FILTROS
 =========================================
 */
 
-const listarPedidos = async (req, res) => {
+const listarPedidos = async (req, res, next) => {
 
     try {
 
@@ -133,17 +133,9 @@ const listarPedidos = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
+    next(error);
 
-            sucesso: false,
-
-            mensagem: "Erro ao buscar pedidos.",
-
-            erro: error.message
-
-        });
-
-    }
+}
 
 };
 
@@ -154,7 +146,7 @@ BUSCAR PEDIDO POR ID
 =========================================
 */
 
-const buscarPedido = async (req, res) => {
+const buscarPedido = async (req, res, next) => {
 
     try {
 
@@ -181,16 +173,9 @@ const buscarPedido = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
+    next(error);
 
-            sucesso: false,
-            mensagem: "Erro ao buscar pedido.",
-            erro: error.message
-
-        });
-
-    }
-
+}
 };
 
 
@@ -200,7 +185,7 @@ CADASTRAR PEDIDO
 =========================================
 */
 
-const cadastrarPedido = async (req, res) => {
+const cadastrarPedido = async (req, res, next) => {
 
     try {
 
@@ -727,15 +712,9 @@ VALIDAR ITENS DO PEDIDO
 
     } catch (error) {
 
-        return res.status(500).json({
+    next(error);
 
-            sucesso: false,
-            mensagem: "Erro ao cadastrar pedido.",
-            erro: error.message
-
-        });
-
-    }
+}
 
 };
 
@@ -746,7 +725,7 @@ ATUALIZAR STATUS DO PEDIDO
 =========================================
 */
 
-const atualizarStatusPedido = async (req, res) => {
+const atualizarStatusPedido = async (req, res, next) => {
 
     try {
 
@@ -894,17 +873,9 @@ const atualizarStatusPedido = async (req, res) => {
 
     } catch (error) {
 
-        return res.status(500).json({
+    next(error);
 
-            sucesso: false,
-
-            mensagem: "Erro ao atualizar status do pedido.",
-
-            erro: error.message
-
-        });
-
-    }
+}
 
 };
 
@@ -915,7 +886,7 @@ EXCLUIR PEDIDO
 =========================================
 */
 
-const excluirPedido = async (req, res) => {
+const excluirPedido = async (req, res, next) => {
 
     try {
 
@@ -946,15 +917,9 @@ const excluirPedido = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
+    next(error);
 
-            sucesso: false,
-            mensagem: "Erro ao excluir pedido.",
-            erro: error.message
-
-        });
-
-    }
+}
 
 };
 

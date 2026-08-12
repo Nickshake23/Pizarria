@@ -1,10 +1,11 @@
 const errorHandler = (error, req, res, next) => {
 
-    console.error(error);
+    console.error("ERRO:", error);
+
 
     /*
     =========================================
-    ERRO DE ID DO MONGODB
+    ID DO MONGODB INVÁLIDO
     =========================================
     */
 
@@ -52,24 +53,25 @@ const errorHandler = (error, req, res, next) => {
 
     /*
     =========================================
-    ERRO DE DUPLICIDADE
+    DADO DUPLICADO
     =========================================
     */
 
     if (error.code === 11000) {
 
-        const campo = Object.keys(error.keyPattern)[0];
+    const campo = error.keyPattern
+        ? Object.keys(error.keyPattern)[0]
+        : "informação";
 
-        return res.status(409).json({
+    return res.status(409).json({
 
-            sucesso: false,
+        sucesso: false,
 
-            mensagem: `O campo "${campo}" já está cadastrado.`
+        mensagem: `O campo "${campo}" já está cadastrado.`
 
-        });
+    });
 
-    }
-
+}
 
     /*
     =========================================
