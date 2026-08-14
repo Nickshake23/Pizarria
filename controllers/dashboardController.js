@@ -1,0 +1,239 @@
+const Cliente = require("../models/Cliente");
+const Produto = require("../models/Produto");
+const Pedido = require("../models/Pedido");
+
+/*
+=========================================
+DASHBOARD
+=========================================
+*/
+
+const obterDashboard = async (req, res, next) => {
+
+    try {
+    
+        const {
+            inicio,
+            fim
+        } = req.query;
+
+        const filtroPeriodo = {};
+
+        if (inicio) {
+                    
+            filtroPeriodo.createdAt = {
+                $gte: new Date(`${inicio}T00:00:00`)
+            };
+        
+        }
+
+        if (fim) {
+
+            filtroPeriodo.createdAt = {
+            
+                ...filtroPeriodo.createdAt,
+            
+                $lte: new Date(`${fim}T23:59:59.999`)
+            
+            };
+        
+        }
+
+        if (inicio && isNaN(new Date(`${inicio}T00:00:00`).getTime())) {
+
+    return res.status(400).json({
+
+        sucesso: false,
+
+        mensagem: "A data inicial é inválida."
+
+    });
+
+}
+
+
+if (fim && isNaN(new Date(`${fim}T00:00:00`).getTime())) {
+
+    return res.status(400).json({
+
+        sucesso: false,
+
+        mensagem: "A data final é inválida."
+
+    });
+
+}
+
+if (inicio && fim) {
+
+    const dataInicio = new Date(`${inicio}T00:00:00`);
+    const dataFim = new Date(`${fim}T23:59:59.999`);
+
+    if (dataInicio > dataFim) {
+
+        return res.status(400).json({
+
+            sucesso: false,
+
+            mensagem: "A data inicial não pode ser maior que a data final."
+
+        });
+
+    }
+
+}
+
+
+
+        
+
+        const totalClientes =
+            await Cliente.countDocuments();
+
+
+        const totalProdutos =
+            await Produto.countDocuments();
+
+
+        const produtosDisponiveis =
+            await Produto.countDocuments({
+                disponivel: true
+            });
+
+
+        const totalPedidos =
+            await Pedido.countDocuments(filtroPeriodo);
+
+
+        /*
+        =========================================
+        PEDIDOS POR STATUS
+        =========================================
+        */
+
+        const pedidosRecebidos =
+            await Pedido.countDocuments({
+        ...filtroPeriodo,
+        status: "Recebido"
+            });
+
+
+        const pedidosEmPreparo =
+             await Pedido.countDocuments({
+        ...filtroPeriodo,
+        status: "Em preparo"
+            });
+
+
+        const pedidosSaiuEntrega =
+             await Pedido.countDocuments({
+        ...filtroPeriodo,
+        status: "Saiu para entrega"
+            });
+
+
+        const pedidosEntregues =
+             await Pedido.countDocuments({
+        ...filtroPeriodo,
+        status: "Entregue"
+            });
+
+
+        const pedidosCancelados =
+             await Pedido.countDocuments({
+        ...filtroPeriodo,
+        status: "Cancelado"
+            });
+
+
+        /*
+        =========================================
+        VALOR TOTAL DAS VENDAS
+        =========================================
+        */
+
+const resultadoVendas = await Pedido.aggregate([
+
+    {
+        $match: {
+
+            ...filtroPeriodo,
+
+            status: {
+                $ne: "Cancelado"
+            }
+
+        }
+    },
+
+    {
+        $group: {
+
+            _id: null,
+
+            valorTotalVendas: {
+                $sum: "$valorTotal"
+            }
+
+        }
+    }
+
+]);
+
+
+        const valorTotalVendas =
+            resultadoVendas.length > 0
+                ? resultadoVendas[0].valorTotalVendas
+                : 0;
+
+
+        /*
+        =========================================
+        RESPOSTA
+        =========================================
+        */
+
+        res.status(200).json({
+
+            sucesso: true,
+
+            dashboard: {
+
+                totalClientes,
+
+                totalProdutos,
+
+                produtosDisponiveis,
+
+                totalPedidos,
+
+                pedidosRecebidos,
+
+                pedidosEmPreparo,
+
+                pedidosSaiuEntrega,
+
+                pedidosEntregues,
+
+                pedidosCancelados,
+
+                valorTotalVendas
+
+            }
+
+        });
+
+    } catch (error) {
+
+        next(error);
+
+    }
+
+};
+
+
+module.exports = {
+
+    obterDashboard
+
+};

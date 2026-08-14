@@ -8,6 +8,7 @@ const clientesRoutes = require("./routes/clientes");
 const produtosRoutes = require("./routes/produtos");
 const usuariosRoutes = require("./routes/usuarios");
 const pedidosRoutes = require("./routes/pedidos");
+const dashboardRoutes = require("./routes/dashboard");
 const errorHandler = require("./middlewares/errorHandler");
 
 const app = express();
@@ -27,6 +28,7 @@ app.use("/usuarios", usuariosRoutes);
 app.use("/clientes", clientesRoutes);
 app.use("/produtos", produtosRoutes);
 app.use("/pedidos", pedidosRoutes);
+app.use("/dashboard", dashboardRoutes);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
