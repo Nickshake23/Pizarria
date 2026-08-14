@@ -2,10 +2,9 @@ const Produto = require("../models/Produto");
 
 /*
 =========================================
-LISTAR PRODUTOS
+LISTAR PRODUTOS COM PAGINAÇÃO E ORDENAÇÃO
 =========================================
 */
-
 const listarProdutos = async (req, res, next) => {
 
     try {
@@ -13,8 +12,97 @@ const listarProdutos = async (req, res, next) => {
         const {
             nome,
             categoria,
-            disponivel
+            disponivel,
+            page = 1,
+            limit = 10,
+            sort = "nome",
+            order = "asc"
         } = req.query;
+
+
+        /*
+        =========================================
+        VALIDAR PAGINAÇÃO
+        =========================================
+        */
+
+        const pagina = Number(page);
+        const limite = Number(limit);
+
+
+        if (
+            !Number.isInteger(pagina) ||
+            pagina < 1
+        ) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "A página deve ser um número inteiro maior que 0."
+
+            });
+
+        }
+
+
+        if (
+            !Number.isInteger(limite) ||
+            limite < 1 ||
+            limite > 100
+        ) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "O limite deve ser um número entre 1 e 100."
+
+            });
+
+        }
+
+
+        /*
+        =========================================
+        VALIDAR ORDENAÇÃO
+        =========================================
+        */
+
+        const camposPermitidos = [
+            "nome",
+            "preco",
+            "categoria"
+        ];
+
+
+        if (!camposPermitidos.includes(sort)) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "Campo de ordenação inválido."
+
+            });
+
+        }
+
+
+        if (
+            order !== "asc" &&
+            order !== "desc"
+        ) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "A ordem deve ser asc ou desc."
+
+            });
+
+        }
 
 
         /*
@@ -35,8 +123,11 @@ const listarProdutos = async (req, res, next) => {
         if (nome) {
 
             filtros.nome = {
+
                 $regex: nome,
+
                 $options: "i"
+
             };
 
         }
@@ -71,6 +162,7 @@ const listarProdutos = async (req, res, next) => {
                 return res.status(400).json({
 
                     sucesso: false,
+
                     mensagem: "O campo disponivel deve ser true ou false."
 
                 });
@@ -84,12 +176,53 @@ const listarProdutos = async (req, res, next) => {
 
         /*
         =========================================
+        CALCULAR PAGINAÇÃO
+        =========================================
+        */
+
+        const pular = (pagina - 1) * limite;
+
+
+        /*
+        =========================================
+        DEFINIR ORDENAÇÃO
+        =========================================
+        */
+
+        const ordem = {
+
+            [sort]: order === "asc" ? 1 : -1
+
+        };
+
+
+        /*
+        =========================================
         BUSCAR PRODUTOS
         =========================================
         */
 
         const produtos = await Produto.find(filtros)
-            .sort({ nome: 1 });
+
+            .sort(ordem)
+
+            .skip(pular)
+
+            .limit(limite);
+
+
+        /*
+        =========================================
+        CONTAR TOTAL
+        =========================================
+        */
+
+        const total = await Produto.countDocuments(filtros);
+
+
+        const totalPaginas = Math.ceil(
+            total / limite
+        );
 
 
         /*
@@ -102,18 +235,33 @@ const listarProdutos = async (req, res, next) => {
 
             sucesso: true,
 
+            pagina,
+
+            limite,
+
+            total,
+
+            totalPaginas,
+
             quantidade: produtos.length,
+
+            ordenacao: {
+
+                campo: sort,
+
+                ordem: order
+
+            },
 
             produtos
 
         });
 
-
     } catch (error) {
 
-    next(error);
+        next(error);
 
-}
+    }
 
 };
 

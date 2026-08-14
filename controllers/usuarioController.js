@@ -17,11 +17,12 @@ const listarUsuarios = async (req, res, next) => {
 
     } catch (error) {
 
-    next(error);
+        next(error);
 
-}
+    }
 
 };
+
 
 /*
 =========================================
@@ -47,19 +48,19 @@ const buscarUsuario = async (req, res, next) => {
 
     } catch (error) {
 
-    next(error);
+        next(error);
 
-}
+    }
 
 };
+
 
 /*
 =========================================
 CADASTRAR USUÁRIO
 =========================================
 */
-
-const cadastrarUsuario = async (req, res) => {
+const cadastrarUsuario = async (req, res, next) => {
 
     try {
 
@@ -251,98 +252,121 @@ const cadastrarUsuario = async (req, res) => {
 
     } catch (error) {
 
-        /*
-        =========================================
-        ERRO DE VALIDAÇÃO
-        =========================================
-        */
-
-        if (error.name === "ValidationError") {
-
-            return res.status(400).json({
-
-                sucesso: false,
-
-                mensagem: "Dados do usuário inválidos.",
-
-                erro: error.message
-
-            });
-
-        }
-
-
-        /*
-        =========================================
-        ERRO INTERNO
-        =========================================
-        */
-
-        return res.status(500).json({
-
-            sucesso: false,
-
-            mensagem: "Erro ao cadastrar usuário.",
-
-            erro: error.message
-
-        });
+        next(error);
 
     }
 
 };
+
 
 /*
 =========================================
 LOGIN
 =========================================
 */
-const login = async (req, res) => {
+const login = async (req, res, next) => {
 
     try {
 
-        const { email, senha } = req.body;
+        const {
+            email,
+            senha
+        } = req.body;
 
-        const usuario = await Usuario.findOne({ email }).select("+senha");
+
+        /*
+        =========================================
+        BUSCAR USUÁRIO
+        =========================================
+        */
+
+        const usuario = await Usuario
+            .findOne({ email })
+            .select("+senha");
+
+
+        /*
+        =========================================
+        VERIFICAR USUÁRIO
+        =========================================
+        */
 
         if (!usuario) {
 
             return res.status(401).json({
+
                 sucesso: false,
+
                 mensagem: "E-mail ou senha inválidos."
+
             });
 
         }
 
-        const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+
+        /*
+        =========================================
+        VERIFICAR SENHA
+        =========================================
+        */
+
+        const senhaCorreta =
+            await bcrypt.compare(
+                senha,
+                usuario.senha
+            );
+
 
         if (!senhaCorreta) {
 
             return res.status(401).json({
+
                 sucesso: false,
+
                 mensagem: "E-mail ou senha inválidos."
+
             });
 
         }
 
+
+        /*
+        =========================================
+        GERAR TOKEN
+        =========================================
+        */
+
         const token = jwt.sign(
 
             {
+
                 id: usuario._id,
+
                 cargo: usuario.cargo
+
             },
 
             process.env.JWT_SECRET,
 
             {
+
                 expiresIn: "8h"
+
             }
 
         );
 
+
+        /*
+        =========================================
+        RESPOSTA
+        =========================================
+        */
+
         res.json({
 
             sucesso: true,
+
             mensagem: "Login realizado com sucesso.",
 
             token,
@@ -350,8 +374,11 @@ const login = async (req, res) => {
             usuario: {
 
                 id: usuario._id,
+
                 nome: usuario.nome,
+
                 email: usuario.email,
+
                 cargo: usuario.cargo
 
             }
@@ -360,16 +387,12 @@ const login = async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
-
-            sucesso: false,
-            erro: error.message
-
-        });
+        next(error);
 
     }
 
 };
+
 
 /*
 =========================================
@@ -380,53 +403,90 @@ const atualizarUsuario = async (req, res, next) => {
 
     try {
 
+        /*
+        =========================================
+        CRIPTOGRAFAR NOVA SENHA
+        =========================================
+        */
+
         if (req.body.senha) {
 
-            req.body.senha = await bcrypt.hash(req.body.senha, 10);
+            req.body.senha =
+                await bcrypt.hash(
+                    req.body.senha,
+                    10
+                );
 
         }
 
-        const usuario = await Usuario.findByIdAndUpdate(
 
-            req.params.id,
+        /*
+        =========================================
+        ATUALIZAR USUÁRIO
+        =========================================
+        */
 
-            req.body,
+        const usuario =
+            await Usuario.findByIdAndUpdate(
 
-            {
+                req.params.id,
 
-                new: true,
-                runValidators: true
+                req.body,
 
-            }
+                {
 
-        );
+                    new: true,
+
+                    runValidators: true
+
+                }
+
+            );
+
+
+        /*
+        =========================================
+        VERIFICAR USUÁRIO
+        =========================================
+        */
 
         if (!usuario) {
 
             return res.status(404).json({
 
                 sucesso: false,
+
                 mensagem: "Usuário não encontrado."
 
             });
 
         }
 
+
+        /*
+        =========================================
+        RESPOSTA
+        =========================================
+        */
+
         res.json({
 
             sucesso: true,
+
             mensagem: "Usuário atualizado.",
+
             usuario
 
         });
 
     } catch (error) {
 
-    next(error);
+        next(error);
 
-}
+    }
 
 };
+
 
 /*
 =========================================
@@ -437,41 +497,72 @@ const excluirUsuario = async (req, res, next) => {
 
     try {
 
-        const usuario = await Usuario.findByIdAndDelete(req.params.id);
+        const usuario =
+            await Usuario.findByIdAndDelete(
+                req.params.id
+            );
+
+
+        /*
+        =========================================
+        VERIFICAR USUÁRIO
+        =========================================
+        */
 
         if (!usuario) {
 
             return res.status(404).json({
 
                 sucesso: false,
+
                 mensagem: "Usuário não encontrado."
 
             });
 
         }
 
+
+        /*
+        =========================================
+        RESPOSTA
+        =========================================
+        */
+
         res.json({
 
             sucesso: true,
+
             mensagem: "Usuário removido."
 
         });
 
     } catch (error) {
 
-    next(error);
+        next(error);
 
-}
+    }
 
 };
+
+
+/*
+=========================================
+EXPORTAR FUNÇÕES
+=========================================
+*/
 
 module.exports = {
 
     listarUsuarios,
+
     buscarUsuario,
+
     cadastrarUsuario,
+
     login,
+
     atualizarUsuario,
+
     excluirUsuario
 
 };

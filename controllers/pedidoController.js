@@ -4,97 +4,130 @@ const Produto = require("../models/Produto");
 const Usuario = require("../models/Usuario");
 
 
+
 /*
 =========================================
-LISTAR PEDIDOS COM FILTROS
+LISTAR PEDIDOS COM PAGINAÇÃO E ORDENAÇÃO
 =========================================
 */
-
 const listarPedidos = async (req, res, next) => {
 
     try {
 
         const {
-            status,
-            tipoPedido,
-            formaPagamento,
-            cliente,
-            numeroPedido
+            page = 1,
+            limit = 10,
+            sort = "createdAt",
+            order = "desc"
         } = req.query;
 
 
         /*
         =========================================
-        MONTAR FILTROS
+        VALIDAR PAGINAÇÃO
         =========================================
         */
 
-        const filtros = {};
+        const pagina = Number(page);
+        const limite = Number(limit);
 
 
-        /*
-        =========================================
-        FILTRAR POR STATUS
-        =========================================
-        */
+        if (
+            !Number.isInteger(pagina) ||
+            pagina < 1
+        ) {
 
-        if (status) {
+            return res.status(400).json({
 
-            filtros.status = status;
+                sucesso: false,
+
+                mensagem: "A página deve ser um número inteiro maior que 0."
+
+            });
+
+        }
+
+
+        if (
+            !Number.isInteger(limite) ||
+            limite < 1 ||
+            limite > 100
+        ) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "O limite deve ser um número entre 1 e 100."
+
+            });
 
         }
 
 
         /*
         =========================================
-        FILTRAR POR TIPO DE PEDIDO
+        VALIDAR ORDENAÇÃO
         =========================================
         */
 
-        if (tipoPedido) {
+        const camposPermitidos = [
+            "createdAt",
+            "numeroPedido",
+            "valorTotal",
+            "status"
+        ];
 
-            filtros.tipoPedido = tipoPedido;
+
+        if (!camposPermitidos.includes(sort)) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "Campo de ordenação inválido."
+
+            });
+
+        }
+
+
+        if (
+            order !== "asc" &&
+            order !== "desc"
+        ) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem: "A ordem deve ser asc ou desc."
+
+            });
 
         }
 
 
         /*
         =========================================
-        FILTRAR POR FORMA DE PAGAMENTO
+        CALCULAR PAGINAÇÃO
         =========================================
         */
 
-        if (formaPagamento) {
-
-            filtros.formaPagamento = formaPagamento;
-
-        }
+        const pular = (pagina - 1) * limite;
 
 
         /*
         =========================================
-        FILTRAR POR CLIENTE
+        DEFINIR ORDENAÇÃO
         =========================================
         */
 
-        if (cliente) {
+        const ordem = {
 
-            filtros.cliente = cliente;
+            [sort]: order === "asc" ? 1 : -1
 
-        }
-
-
-        /*
-        =========================================
-        BUSCAR POR NÚMERO DO PEDIDO
-        =========================================
-        */
-
-        if (numeroPedido) {
-
-            filtros.numeroPedido = numeroPedido;
-
-        }
+        };
 
 
         /*
@@ -103,7 +136,7 @@ const listarPedidos = async (req, res, next) => {
         =========================================
         */
 
-        const pedidos = await Pedido.find(filtros)
+        const pedidos = await Pedido.find()
 
             .populate("cliente")
 
@@ -111,7 +144,25 @@ const listarPedidos = async (req, res, next) => {
 
             .populate("itens.produto")
 
-            .sort({ createdAt: -1 });
+            .sort(ordem)
+
+            .skip(pular)
+
+            .limit(limite);
+
+
+        /*
+        =========================================
+        CONTAR TOTAL
+        =========================================
+        */
+
+        const total = await Pedido.countDocuments();
+
+
+        const totalPaginas = Math.ceil(
+            total / limite
+        );
 
 
         /*
@@ -124,18 +175,33 @@ const listarPedidos = async (req, res, next) => {
 
             sucesso: true,
 
+            pagina,
+
+            limite,
+
+            total,
+
+            totalPaginas,
+
             quantidade: pedidos.length,
+
+            ordenacao: {
+
+                campo: sort,
+
+                ordem: order
+
+            },
 
             pedidos
 
         });
 
-
     } catch (error) {
 
-    next(error);
+        next(error);
 
-}
+    }
 
 };
 
