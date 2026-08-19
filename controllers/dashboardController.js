@@ -186,6 +186,102 @@ const resultadoVendas = await Pedido.aggregate([
                 ? resultadoVendas[0].valorTotalVendas
                 : 0;
 
+ /*
+=========================================
+ÚLTIMOS PEDIDOS
+=========================================
+*/
+
+        const ultimosPedidos = await Pedido.find(filtroPeriodo)
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .populate("cliente", "nome telefone")
+            .populate("usuario", "nome cargo")
+            .populate("itens.produto", "nome preco");
+
+/*
+=========================================
+PRODUTOS MAIS VENDIDOS
+=========================================
+*/
+
+/*
+=========================================
+PRODUTOS MAIS VENDIDOS
+=========================================
+*/
+
+const produtosMaisVendidos = await Pedido.aggregate([
+
+    {
+        $match: {
+
+            ...filtroPeriodo,
+
+            status: {
+                $ne: "Cancelado"
+            }
+
+        }
+    },
+
+    {
+        $unwind: "$itens"
+    },
+
+    {
+        $group: {
+
+            _id: "$itens.produto",
+
+            quantidadeVendida: {
+                $sum: "$itens.quantidade"
+            }
+
+        }
+    },
+
+    {
+        $lookup: {
+
+            from: "produtos",
+
+            localField: "_id",
+
+            foreignField: "_id",
+
+            as: "produto"
+
+        }
+    },
+
+    {
+        $unwind: "$produto"
+    },
+
+    {
+        $project: {
+
+            _id: 0,
+
+            produto: "$produto.nome",
+
+            quantidadeVendida: 1
+
+        }
+    },
+
+    {
+        $sort: {
+            quantidadeVendida: -1
+        }
+    },
+
+    {
+        $limit: 5
+    }
+
+]);
 
         /*
         =========================================
@@ -217,7 +313,11 @@ const resultadoVendas = await Pedido.aggregate([
 
                 pedidosCancelados,
 
-                valorTotalVendas
+                valorTotalVendas,
+
+                ultimosPedidos,
+
+                produtosMaisVendidos
 
             }
 
