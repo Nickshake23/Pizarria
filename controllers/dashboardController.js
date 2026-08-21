@@ -199,11 +199,6 @@ const resultadoVendas = await Pedido.aggregate([
             .populate("usuario", "nome cargo")
             .populate("itens.produto", "nome preco");
 
-/*
-=========================================
-PRODUTOS MAIS VENDIDOS
-=========================================
-*/
 
 /*
 =========================================
@@ -283,6 +278,63 @@ const produtosMaisVendidos = await Pedido.aggregate([
 
 ]);
 
+/*
+=========================================
+FATURAMENTO POR DIA
+=========================================
+*/
+
+const faturamentoPorDia = await Pedido.aggregate([
+
+    {
+        $match: {
+
+            ...filtroPeriodo,
+
+            status: {
+                $ne: "Cancelado"
+            }
+
+        }
+    },
+
+    {
+        $group: {
+
+            _id: {
+                $dateToString: {
+                    format: "%Y-%m-%d",
+                    date: "$createdAt"
+                }
+            },
+
+            valor: {
+                $sum: "$valorTotal"
+            }
+
+        }
+    },
+
+    {
+        $sort: {
+            _id: 1
+        }
+    },
+
+    {
+        $project: {
+
+            _id: 0,
+
+            data: "$_id",
+
+            valor: 1
+
+        }
+    }
+
+]);
+
         /*
         =========================================
         RESPOSTA
@@ -317,7 +369,9 @@ const produtosMaisVendidos = await Pedido.aggregate([
 
                 ultimosPedidos,
 
-                produtosMaisVendidos
+                produtosMaisVendidos,
+
+                faturamentoPorDia
 
             }
 
