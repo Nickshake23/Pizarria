@@ -313,6 +313,7 @@ const cadastrarProduto = async (req, res, next) => {
         const {
             nome,
             descricao,
+            imagem,
             categoria,
             preco,
             tamanho,
@@ -462,6 +463,8 @@ const cadastrarProduto = async (req, res, next) => {
             nome: nome.trim(),
 
             descricao: descricao || "",
+
+            imagem: imagem || "",
 
             categoria: categoria.trim(),
 

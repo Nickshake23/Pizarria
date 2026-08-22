@@ -2,6 +2,7 @@ const Cliente = require("../models/Cliente");
 const Produto = require("../models/Produto");
 const Pedido = require("../models/Pedido");
 
+
 /*
 =========================================
 DASHBOARD
@@ -11,329 +12,690 @@ DASHBOARD
 const obterDashboard = async (req, res, next) => {
 
     try {
-    
+
+        /*
+        =========================================
+        VALIDAÇÃO E FILTRO POR PERÍODO
+        =========================================
+        */
+
+        const validarData = (data) => {
+
+            const formato = /^\d{4}-\d{2}-\d{2}$/;
+
+            if (!formato.test(data)) {
+                return false;
+            }
+
+
+            const [ano, mes, dia] =
+                data.split("-").map(Number);
+
+
+            const dataTeste =
+                new Date(ano, mes - 1, dia);
+
+
+            return (
+                dataTeste.getFullYear() === ano &&
+                dataTeste.getMonth() === mes - 1 &&
+                dataTeste.getDate() === dia
+            );
+
+        };
+
+
         const {
             inicio,
             fim
         } = req.query;
 
+
+        /*
+        =========================================
+        VALIDAÇÃO DA DATA INICIAL
+        =========================================
+        */
+
+        if (inicio && !validarData(inicio)) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem:
+                    "A data inicial é inválida. Use o formato YYYY-MM-DD."
+
+            });
+
+        }
+
+
+        /*
+        =========================================
+        VALIDAÇÃO DA DATA FINAL
+        =========================================
+        */
+
+        if (fim && !validarData(fim)) {
+
+            return res.status(400).json({
+
+                sucesso: false,
+
+                mensagem:
+                    "A data final é inválida. Use o formato YYYY-MM-DD."
+
+            });
+
+        }
+
+
+        /*
+        =========================================
+        FILTRO DE PERÍODO
+        =========================================
+        */
+
         const filtroPeriodo = {};
 
+
         if (inicio) {
-                    
+
             filtroPeriodo.createdAt = {
-                $gte: new Date(`${inicio}T00:00:00`)
+
+                $gte:
+                    new Date(`${inicio}T00:00:00`)
+
             };
-        
+
         }
+
 
         if (fim) {
 
             filtroPeriodo.createdAt = {
-            
+
                 ...filtroPeriodo.createdAt,
-            
-                $lte: new Date(`${fim}T23:59:59.999`)
-            
+
+                $lte:
+                    new Date(`${fim}T23:59:59.999`)
+
             };
-        
+
         }
 
-        if (inicio && isNaN(new Date(`${inicio}T00:00:00`).getTime())) {
 
-    return res.status(400).json({
+        /*
+        =========================================
+        VALIDAÇÃO DO INTERVALO
+        =========================================
+        */
 
-        sucesso: false,
+        if (inicio && fim) {
 
-        mensagem: "A data inicial é inválida."
+            const dataInicio =
+                new Date(`${inicio}T00:00:00`);
 
-    });
-
-}
-
-
-if (fim && isNaN(new Date(`${fim}T00:00:00`).getTime())) {
-
-    return res.status(400).json({
-
-        sucesso: false,
-
-        mensagem: "A data final é inválida."
-
-    });
-
-}
-
-if (inicio && fim) {
-
-    const dataInicio = new Date(`${inicio}T00:00:00`);
-    const dataFim = new Date(`${fim}T23:59:59.999`);
-
-    if (dataInicio > dataFim) {
-
-        return res.status(400).json({
-
-            sucesso: false,
-
-            mensagem: "A data inicial não pode ser maior que a data final."
-
-        });
-
-    }
-
-}
+            const dataFim =
+                new Date(`${fim}T23:59:59.999`);
 
 
+            if (dataInicio > dataFim) {
 
-        
+                return res.status(400).json({
 
-        const totalClientes =
-            await Cliente.countDocuments();
+                    sucesso: false,
+
+                    mensagem:
+                        "A data inicial não pode ser maior que a data final."
+
+                });
+
+            }
+
+        }
 
 
-        const totalProdutos =
-            await Produto.countDocuments();
+        /*
+        =========================================
+        CONTADORES DO DASHBOARD
+        =========================================
+        */
+
+        const [
+
+            totalClientes,
+
+            totalProdutos,
+
+            produtosDisponiveis,
+
+            totalPedidos,
+
+            pedidosRecebidos,
+
+            pedidosEmPreparo,
+
+            pedidosProntos,
+
+            pedidosSaiuEntrega,
+
+            pedidosEntregues,
+
+            pedidosCancelados
+
+        ] = await Promise.all([
 
 
-        const produtosDisponiveis =
-            await Produto.countDocuments({
+            Cliente.countDocuments(),
+
+
+            Produto.countDocuments(),
+
+
+            Produto.countDocuments({
                 disponivel: true
-            });
+            }),
 
 
-        const totalPedidos =
-            await Pedido.countDocuments(filtroPeriodo);
+            Pedido.countDocuments(
+                filtroPeriodo
+            ),
+
+
+            Pedido.countDocuments({
+
+                ...filtroPeriodo,
+
+                status: "Recebido"
+
+            }),
+
+
+            Pedido.countDocuments({
+
+                ...filtroPeriodo,
+
+                status: "Em preparo"
+
+            }),
+
+
+            Pedido.countDocuments({
+
+                ...filtroPeriodo,
+
+                status: "Pronto"
+
+            }),
+
+
+            Pedido.countDocuments({
+
+                ...filtroPeriodo,
+
+                status: "Saiu para entrega"
+
+            }),
+
+
+            Pedido.countDocuments({
+
+                ...filtroPeriodo,
+
+                status: "Entregue"
+
+            }),
+
+
+            Pedido.countDocuments({
+
+                ...filtroPeriodo,
+
+                status: "Cancelado"
+
+            })
+
+        ]);
 
 
         /*
         =========================================
-        PEDIDOS POR STATUS
+        CONSULTAS PRINCIPAIS DO DASHBOARD
         =========================================
         */
 
-        const pedidosRecebidos =
-            await Pedido.countDocuments({
-        ...filtroPeriodo,
-        status: "Recebido"
-            });
+        const [
+
+            ultimosPedidos,
+
+            produtosMaisVendidos,
+
+            faturamentoPorDia,
+
+            vendasPorFormaPagamento,
+
+            vendasPorTipoPedido,
+
+            resultadoFinanceiro
+
+        ] = await Promise.all([
 
 
-        const pedidosEmPreparo =
-             await Pedido.countDocuments({
-        ...filtroPeriodo,
-        status: "Em preparo"
-            });
+            /*
+            =========================================
+            ÚLTIMOS PEDIDOS
+            =========================================
+            */
+
+            Pedido.find(filtroPeriodo)
+
+                .select(
+                    "numeroPedido cliente usuario valorTotal tipoPedido formaPagamento status createdAt"
+                )
+
+                .sort({
+                    createdAt: -1
+                })
+
+                .limit(5)
+
+                .populate(
+                    "cliente",
+                    "nome telefone"
+                )
+
+                .populate(
+                    "usuario",
+                    "nome cargo"
+                ),
 
 
-        const pedidosSaiuEntrega =
-             await Pedido.countDocuments({
-        ...filtroPeriodo,
-        status: "Saiu para entrega"
-            });
+            /*
+            =========================================
+            PRODUTOS MAIS VENDIDOS
+            =========================================
+            */
+
+            Pedido.aggregate([
+
+                {
+                    $match: {
+
+                        ...filtroPeriodo,
+
+                        status: {
+                            $ne: "Cancelado"
+                        }
+
+                    }
+                },
+
+                {
+                    $unwind: "$itens"
+                },
+
+                {
+                    $group: {
+
+                        _id: "$itens.produto",
+
+                        quantidadeVendida: {
+                            $sum: "$itens.quantidade"
+                        }
+
+                    }
+                },
+
+                {
+                    $lookup: {
+
+                        from: "produtos",
+
+                        localField: "_id",
+
+                        foreignField: "_id",
+
+                        as: "produto"
+
+                    }
+                },
+
+                {
+                    $unwind: "$produto"
+                },
+
+                {
+                    $project: {
+
+                        _id: 0,
+
+                        produto:
+                            "$produto.nome",
+
+                        quantidadeVendida: 1
+
+                    }
+                },
+
+                {
+                    $sort: {
+                        quantidadeVendida: -1
+                    }
+                },
+
+                {
+                    $limit: 5
+                }
+
+            ]),
 
 
-        const pedidosEntregues =
-             await Pedido.countDocuments({
-        ...filtroPeriodo,
-        status: "Entregue"
-            });
+            /*
+            =========================================
+            FATURAMENTO POR DIA
+            =========================================
+            */
+
+            Pedido.aggregate([
+
+                {
+                    $match: {
+
+                        ...filtroPeriodo,
+
+                        status: {
+                            $ne: "Cancelado"
+                        }
+
+                    }
+                },
+
+                {
+                    $group: {
+
+                        _id: {
+
+                            $dateToString: {
+
+                                format:
+                                    "%Y-%m-%d",
+
+                                date:
+                                    "$createdAt"
+
+                            }
+
+                        },
+
+                        valor: {
+                            $sum: "$valorTotal"
+                        }
+
+                    }
+                },
+
+                {
+                    $sort: {
+                        _id: 1
+                    }
+                },
+
+                {
+                    $project: {
+
+                        _id: 0,
+
+                        data: "$_id",
+
+                        valor: 1
+
+                    }
+                }
+
+            ]),
 
 
-        const pedidosCancelados =
-             await Pedido.countDocuments({
-        ...filtroPeriodo,
-        status: "Cancelado"
-            });
+            /*
+            =========================================
+            VENDAS POR FORMA DE PAGAMENTO
+            =========================================
+            */
+
+            Pedido.aggregate([
+
+                {
+                    $match: {
+
+                        ...filtroPeriodo,
+
+                        status: {
+                            $ne: "Cancelado"
+                        }
+
+                    }
+                },
+
+                {
+                    $group: {
+
+                        _id:
+                            "$formaPagamento",
+
+                        quantidadePedidos: {
+                            $sum: 1
+                        },
+
+                        valorTotal: {
+                            $sum: "$valorTotal"
+                        }
+
+                    }
+                },
+
+                {
+                    $project: {
+
+                        _id: 0,
+
+                        formaPagamento:
+                            "$_id",
+
+                        quantidadePedidos: 1,
+
+                        valorTotal: 1
+
+                    }
+                },
+
+                {
+                    $sort: {
+                        valorTotal: -1
+                    }
+                }
+
+            ]),
+
+
+            /*
+            =========================================
+            VENDAS POR TIPO DE PEDIDO
+            =========================================
+            */
+
+            Pedido.aggregate([
+
+                {
+                    $match: {
+
+                        ...filtroPeriodo,
+
+                        status: {
+                            $ne: "Cancelado"
+                        }
+
+                    }
+                },
+
+                {
+                    $group: {
+
+                        _id:
+                            "$tipoPedido",
+
+                        quantidadePedidos: {
+                            $sum: 1
+                        },
+
+                        valorTotal: {
+                            $sum: "$valorTotal"
+                        }
+
+                    }
+                },
+
+                {
+                    $project: {
+
+                        _id: 0,
+
+                        tipoPedido:
+                            "$_id",
+
+                        quantidadePedidos: 1,
+
+                        valorTotal: 1
+
+                    }
+                },
+
+                {
+                    $sort: {
+                        valorTotal: -1
+                    }
+                }
+
+            ]),
+
+
+            /*
+            =========================================
+            RESUMO FINANCEIRO
+            =========================================
+            */
+
+            Pedido.aggregate([
+
+                {
+                    $match: {
+
+                        ...filtroPeriodo
+
+                    }
+                },
+
+                {
+                    $group: {
+
+                        _id: null,
+
+                        faturamentoBruto: {
+                            $sum: "$valorTotal"
+                        },
+
+                        valorCancelado: {
+
+                            $sum: {
+
+                                $cond: [
+
+                                    {
+                                        $eq: [
+                                            "$status",
+                                            "Cancelado"
+                                        ]
+                                    },
+
+                                    "$valorTotal",
+
+                                    0
+
+                                ]
+
+                            }
+
+                        },
+
+                        pedidosNaoCancelados: {
+
+                            $sum: {
+
+                                $cond: [
+
+                                    {
+                                        $ne: [
+                                            "$status",
+                                            "Cancelado"
+                                        ]
+                                    },
+
+                                    1,
+
+                                    0
+
+                                ]
+
+                            }
+
+                        }
+
+                    }
+                }
+
+            ])
+
+        ]);
 
 
         /*
         =========================================
-        VALOR TOTAL DAS VENDAS
+        CÁLCULOS FINANCEIROS
         =========================================
         */
 
-const resultadoVendas = await Pedido.aggregate([
-
-    {
-        $match: {
-
-            ...filtroPeriodo,
-
-            status: {
-                $ne: "Cancelado"
-            }
-
-        }
-    },
-
-    {
-        $group: {
-
-            _id: null,
-
-            valorTotalVendas: {
-                $sum: "$valorTotal"
-            }
-
-        }
-    }
-
-]);
-
-
-        const valorTotalVendas =
-            resultadoVendas.length > 0
-                ? resultadoVendas[0].valorTotalVendas
+        const faturamentoBruto =
+            resultadoFinanceiro.length > 0
+                ? resultadoFinanceiro[0]
+                    .faturamentoBruto
                 : 0;
 
- /*
-=========================================
-ÚLTIMOS PEDIDOS
-=========================================
-*/
 
-        const ultimosPedidos = await Pedido.find(filtroPeriodo)
-            .sort({ createdAt: -1 })
-            .limit(5)
-            .populate("cliente", "nome telefone")
-            .populate("usuario", "nome cargo")
-            .populate("itens.produto", "nome preco");
+        const valorCancelado =
+            resultadoFinanceiro.length > 0
+                ? resultadoFinanceiro[0]
+                    .valorCancelado
+                : 0;
 
 
-/*
-=========================================
-PRODUTOS MAIS VENDIDOS
-=========================================
-*/
+        const pedidosNaoCancelados =
+            resultadoFinanceiro.length > 0
+                ? resultadoFinanceiro[0]
+                    .pedidosNaoCancelados
+                : 0;
 
-const produtosMaisVendidos = await Pedido.aggregate([
 
-    {
-        $match: {
+        const faturamentoLiquido =
+            faturamentoBruto -
+            valorCancelado;
 
-            ...filtroPeriodo,
 
-            status: {
-                $ne: "Cancelado"
-            }
+        const ticketMedio =
+            pedidosNaoCancelados > 0
+                ? faturamentoLiquido /
+                    pedidosNaoCancelados
+                : 0;
 
-        }
-    },
-
-    {
-        $unwind: "$itens"
-    },
-
-    {
-        $group: {
-
-            _id: "$itens.produto",
-
-            quantidadeVendida: {
-                $sum: "$itens.quantidade"
-            }
-
-        }
-    },
-
-    {
-        $lookup: {
-
-            from: "produtos",
-
-            localField: "_id",
-
-            foreignField: "_id",
-
-            as: "produto"
-
-        }
-    },
-
-    {
-        $unwind: "$produto"
-    },
-
-    {
-        $project: {
-
-            _id: 0,
-
-            produto: "$produto.nome",
-
-            quantidadeVendida: 1
-
-        }
-    },
-
-    {
-        $sort: {
-            quantidadeVendida: -1
-        }
-    },
-
-    {
-        $limit: 5
-    }
-
-]);
-
-/*
-=========================================
-FATURAMENTO POR DIA
-=========================================
-*/
-
-const faturamentoPorDia = await Pedido.aggregate([
-
-    {
-        $match: {
-
-            ...filtroPeriodo,
-
-            status: {
-                $ne: "Cancelado"
-            }
-
-        }
-    },
-
-    {
-        $group: {
-
-            _id: {
-                $dateToString: {
-                    format: "%Y-%m-%d",
-                    date: "$createdAt"
-                }
-            },
-
-            valor: {
-                $sum: "$valorTotal"
-            }
-
-        }
-    },
-
-    {
-        $sort: {
-            _id: 1
-        }
-    },
-
-    {
-        $project: {
-
-            _id: 0,
-
-            data: "$_id",
-
-            valor: 1
-
-        }
-    }
-
-]);
 
         /*
         =========================================
@@ -343,39 +705,112 @@ const faturamentoPorDia = await Pedido.aggregate([
 
         res.status(200).json({
 
-            sucesso: true,
+    sucesso: true,
 
-            dashboard: {
+    dashboard: {
 
-                totalClientes,
+        /*
+        =========================================
+        INFORMAÇÕES GERAIS
+        =========================================
+        */
 
-                totalProdutos,
+        geral: {
 
-                produtosDisponiveis,
+            totalClientes,
 
-                totalPedidos,
+            totalProdutos,
 
-                pedidosRecebidos,
+            produtosDisponiveis
 
-                pedidosEmPreparo,
+        },
 
-                pedidosSaiuEntrega,
 
-                pedidosEntregues,
+        /*
+        =========================================
+        PEDIDOS
+        =========================================
+        */
 
-                pedidosCancelados,
+        pedidos: {
 
-                valorTotalVendas,
+            total: totalPedidos,
 
-                ultimosPedidos,
+            porStatus: {
 
-                produtosMaisVendidos,
+                recebidos:
+                    pedidosRecebidos,
 
-                faturamentoPorDia
+                emPreparo:
+                    pedidosEmPreparo,
+
+                prontos:
+                    pedidosProntos,
+
+                saiuParaEntrega:
+                    pedidosSaiuEntrega,
+
+                entregues:
+                    pedidosEntregues,
+
+                cancelados:
+                    pedidosCancelados
 
             }
 
-        });
+        },
+
+
+        /*
+        =========================================
+        FINANCEIRO
+        =========================================
+        */
+
+        financeiro: {
+
+            faturamentoBruto,
+
+            valorCancelado,
+
+            faturamentoLiquido,
+
+            ticketMedio
+
+        },
+
+
+        /*
+        =========================================
+        RELATÓRIOS
+        =========================================
+        */
+
+        relatorios: {
+
+            produtosMaisVendidos,
+
+            faturamentoPorDia,
+
+            vendasPorFormaPagamento,
+
+            vendasPorTipoPedido
+
+        },
+
+
+        /*
+        =========================================
+        ÚLTIMOS PEDIDOS
+        =========================================
+        */
+
+        ultimosPedidos
+
+    }
+
+});
+
 
     } catch (error) {
 
